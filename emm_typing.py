@@ -83,6 +83,7 @@ def help_function():
 	- pileup file
 	- sorted bam file
 	- reference file with flanking sequences (100 bps upstream and downstream)
+	- summary.yml only available if -v option is used. Contains the information for all alleles in the form of a dictionary; useful for troubleshooting.
 	
 	==========================================================================
 	Notes
@@ -139,6 +140,7 @@ parser.add_argument('--output_directory', '-o', help='please provide an output d
 parser.add_argument('--bowtie', '-b', help='please provide the path for bowtie2', default='bowtie2')
 parser.add_argument('--samtools', '-sam', help='please provide the path for samtools', default='samtools')
 parser.add_argument('--log_directory', '-log', help='please provide the path for log directory')
+parser.add_argument('--verbose', '-v', help='if selected a summary.yml file is generated in the tmp directory', action="store_true")
 opts = parser.parse_args()
 
 """
@@ -221,21 +223,12 @@ def main():
 	
 	logger = log_writer.setup_logger(stdout_log_output, stderr_log_output)
 	
+	top_hits = EMM_determiner_functions.findST(fastq_files, opts.output_directory, profile_file_directory, opts.bowtie,opts.samtools,ids,opts.log_directory,opts.verbose,version = version)
 	
-	top_hits = EMM_determiner_functions.findST(fastq_files, opts.output_directory, profile_file_directory, opts.bowtie,opts.samtools,ids,opts.log_directory,version = version )
-	
-	#outfp = open(os.path.join(opts.output_directory,'top_hits.log'), 'w')
-	#outfp.write(str(top_hits))
-	#outfp.close()
-	
-	#if workflow_name != None:
+
 	try_and_except(stderr_log_output,create_xml_file, top_hits, opts.output_directory,ids,version)	###################	SP
 	try_and_except(stderr_log_output,write_component_complete,opts.output_directory)
-	#elif workflow_name != None:
-	#	xml_values = try_and_except(stderr_log_output,create_xml_file_for_failed_sample, opts.output_directory,ids,workflow_name,version)
-	#	try_and_except(stderr_log_output,create_xml_file, xml_values, opts.output_directory,ids,workflow_name,version)
-	#	try_and_except(stderr_log_output,write_component_complete,opts.output_directory)
-	
+
 	
 try:
 	main()	

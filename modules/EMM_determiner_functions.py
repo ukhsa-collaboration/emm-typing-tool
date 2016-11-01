@@ -50,7 +50,7 @@ version[str]: version number
 
 
 """
-def findST(files, output_directory, profile_file_directory, bowtie, samtools, ids, log_directory, version = ""):
+def findST(files, output_directory, profile_file_directory, bowtie, samtools, ids, log_directory, verbose, version = ""):
     
     # start run time
     start = clock()
@@ -86,7 +86,7 @@ def findST(files, output_directory, profile_file_directory, bowtie, samtools, id
     #Calls two functions: Align and Score functions.
     #1. Align function: map each read set to reference sequence and creates SAM file, converts the SAM file to BAM file,Sort and index BAM file and Generate pileup
     #2. Score function:designate the correct allele and calculate coverage statistics for each locus 
-    top_hits = try_and_except(stderr_log_output ,align_and_get_scores,workingDir, files, bowtie, samtools,log,logger,ids) ################### SP
+    top_hits = try_and_except(stderr_log_output ,align_and_get_scores,workingDir, files, bowtie, samtools,log,logger,ids, verbose) ################### SP
     
     #files with the following extension:'.fasta', '.pkl', '.sam', '.tmp', '.bt2','.out','.unmapped','.unmap','fai' are removed from tmp and output files
     for root, dirs, files in os.walk(output_directory): 
@@ -277,20 +277,17 @@ Return
 Return   score[]probability and coverage statistics score value for each allele
 """
 
-def align_and_get_scores(workingDir, files, bowtie, samtools, log,logger,ids):  ################### SP
-    
-    # insertSize = None
-    # significance = -10 ## CUTOFF --> variable not used
+def align_and_get_scores(workingDir, files, bowtie, samtools, log,logger,ids, verbose):  ################### SP
+
     out = sys.stdout
     nameSep = "-"
-    # verboseFiles = False --> variable not used
     scores = []
     paired = True
     
     pair = files
     if os.path.exists(pair[0]) and os.path.exists(pair[1]):
         align(workingDir, paired, pair, sys.stderr, bowtie, samtools,logger,ids)
-        s = score(pair, workingDir, paired, out, log, nameSep, bowtie, samtools,logger,ids, log)
+        s = score(pair, workingDir, paired, out, log, nameSep, bowtie, samtools,logger,ids, log, verbose)
         out.flush()
         log.flush()
     else:
@@ -312,8 +309,8 @@ def write_log(hits,log):
     if len(hits) > 0:
 		print >> log
 		print >> log, '=' * 70
-		print >> log
 		print >> log, "Results Summary"
+		print >> log, '=' * 70
 		print >> log
 		print >> log, "Allele\tidentity\tcoverage\tmeanDepth\tminDepth\tsnps\tindels\tmixed\tfilteredCoverage"
 		sorted_hits = sorted(hits.items(), key=lambda x: x[1][0], reverse=True)
@@ -375,13 +372,9 @@ def bamify(workDir, pref, files, refFn, expand, logFile, bowtie, samtools, logge
     tmp = os.path.join(workDir, ids + '-' + pref + '.tmp') # temporary sam output
     sam = os.path.join(workDir, ids + '-'+ pref + '.sam')
     bam = os.path.join(workDir, ids + '-'+ pref + '.bam')
-    #un_reads = os.path.join(workDir, ids + '-'+ pref + '.unmapped')
-    #un_conc_reads = os.path.join(workDir, ids + '-'+ pref + '.unmap')   
     
     if expand: # expand = true
         log_writer.info_header(logger, "Creating tmp file")
-        #process = subprocess.Popen([bowtie, '--fr', '--minins', '300', '--maxins', '1100', '-x', refFn, '-1', files[0], '-2', files[1],'-S', tmp, '-k', '99999', '-D', '20', '-R', '3', '-N', '0', '-L', '20', '-i', 'S,1,0.50', '--un', un_reads , '--un-conc',un_conc_reads], stderr=subprocess.PIPE, stdout=subprocess.PIPE) #refFn = refrence sequence, tmp = temorary sam output, -k = report up to 99999 good alignments per read, -D 20 -R 3 -N 0 -L 20 -i S,1,0.50 --very-sensitive option
-        #process.wait()
         process = subprocess.Popen([bowtie, '--fr', '--no-unal', '--minins', '300', '--maxins', '1100', '-x', refFn, '-1', files[0], '-2', files[1], '-S', tmp, '-k', '99999', '-D', '20', '-R', '3', '-N', '0', '-L', '20', '-i', 'S,1,0.50'], stderr=subprocess.PIPE, stdout=subprocess.PIPE) #refFn = refrence sequence, tmp = temorary sam output, -k = report up to 99999 good alignments per read, -D 20 -R 3 -N 0 -L 20 -i S,1,0.50 --very-sensitive option
         process.wait()
         #print ' '.join([bowtie, '--fr', '--minins', '300', '--maxins', '1100', '-x', refFn, '-1', files[0], '-2', files[1],'-S', tmp, '-k', '99999', '-D', '20', '-R', '3', '-N', '0', '-L', '20', '-i', 'S,1,0.50', '--un', un_reads , '--un-conc',un_conc_reads])
@@ -397,8 +390,6 @@ def bamify(workDir, pref, files, refFn, expand, logFile, bowtie, samtools, logge
         
     else:# expand = false, command is called within getNovelAllele function
         log_writer.info_header(logger, "Creating sam file")
-        #process= subprocess.Popen([bowtie,  '--fr', '--minins', '300', '--maxins', '1100', '-x', refFn, '-1', files[0], '-2', files[1],'-S', sam, '-k', '99999', '-D', '20', '-R', '3', '-N', '0', '-L', '20', '-i', 'S,1,0.50', '--un', un_reads , '--un-conc', un_conc_reads], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        #process.wait()
         process= subprocess.Popen([bowtie,  '--fr', '--no-unal', '--minins', '300', '--maxins', '1100', '-x', refFn, '-1', files[0], '-2', files[1],'-S', sam, '-k', '99999', '-D', '20', '-R', '3', '-N', '0', '-L', '20', '-i', 'S,1,0.50'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         process.wait()
         log_writer.log_process(logger, process, log_error_to = "info")
@@ -710,7 +701,7 @@ return
 log file
 
 """
-def score(files, workDir, paired, outFile, logFile, nameSep, bowtie, samtools,logger,ids, log):      # removed insertSize since it wasn't used in the function ###################   SP
+def score(files, workDir, paired, outFile, logFile, nameSep, bowtie, samtools,logger,ids, log, verbose):      # removed insertSize since it wasn't used in the function ###################   SP
     
     pileFn =  os.path.join(workDir, 'all.pileup')
     rangesFn = os.path.join(workDir, "ranges.pkl")# start and end position of locus variant sequences (without the flanking sequences)(ranges.pkl)
@@ -764,8 +755,9 @@ def score(files, workDir, paired, outFile, logFile, nameSep, bowtie, samtools,lo
         metrics[allele] = [identity, coverage, meanDepth, minDepth, snps, indels, mixed, filteredCoverage]
     write_log(metrics, log)
     filtCovId = filter(lambda x: x[1][0]>=90.0 and x[1][-1]==100.0, metrics.items())
-    with open(workDir+'/summary.yml', 'w') as out_fp:
-        out_fp.write(yaml.dump(filtCovId, default_flow_style=True))
+    if verbose:
+		with open(workDir+'/summary.yml', 'w') as out_fp:
+			out_fp.write(yaml.dump(metrics, default_flow_style=True))
     if filtCovId == []:
         validatedMetrics = [(f, metrics[f]) for f in metrics.keys() if f.split('.')[0] in validatedTypes]
         nonValidatedMetrics = [(f, metrics[f]) for f in metrics.keys() if f.split('.')[0] not in validatedTypes]
