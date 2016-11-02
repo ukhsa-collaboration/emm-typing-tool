@@ -143,8 +143,10 @@ An example result.xml file is provided (see Example.result.xml).
 - reference file with flanking sequences (100 bps upstream and downstream)
 - summary.yml only available if -v option is used. Contains the information for all alleles in the form of a dictionary; useful for more indepth troubleshooting.
 
-## Troubleshooting: Formats for the Final_EMM_type:
+## Troubleshooting: 
 ------------------
+
+### Formats for the Final_EMM_type:
 
 - *“emm1.0.sds”*: A subtype is predicted if 100% identity across the full length of the locus is observed.
 - *“emm1”*: A type is predicted if >= 92% identity across the region 30-120 of the locus is observed128.
@@ -156,6 +158,27 @@ An example result.xml file is provided (see Example.result.xml).
   - two subtypes with 100% identity are called (de novo assembly is required to resolve this)
   - two emm non-validated types with > 100% identity are called (further investigation is required and de novo sssembly might be able to provide a type).
 
+### Errors while setting up
+
+```
+Traceback (most recent call last):
+  File "/Users/georgiakapatai/repositories/emm-typing-tool/modules/utility_functions.py", line 54, in try_and_except
+    return function(*parameters, **named_parameters)
+  File "/Users/georgiakapatai/repositories/emm-typing-tool/modules/EMM_determiner_functions.py", line 131, in prep_SRST
+    process = subprocess.Popen(['seqret',seq,'-firstonly','-auto','-out',output_directory+ '/' + bait], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/subprocess.py", line 710, in __init__
+    errread, errwrite)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/subprocess.py", line 1335, in _execute_child
+    raise child_exception
+OSError: [Errno 2] No such file or directory
+```
+**SOLUTION**: The path for emboss needs to be defined in the PATH environmental variable:
+
+```
+PATH="$PATH:/usr/local/emboss/bin"
+export PATH
+```
+If similar error is raised for the lines where subprocess is calling bowtie2 and samtools then either provide the paths with the -b and -sam options respectively or add the paths to the PATH variable as described above.
 
 ## Contact Information
 ----------------------
