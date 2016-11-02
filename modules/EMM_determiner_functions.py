@@ -217,7 +217,7 @@ def prepare(specFn, workDir, bowtie,logger):
     for (loc, variantsFn, flanksFn) in spc:
         loci.append(loc)
         fs = {} # flanking sequences at this locus (key = id, value = seq object)
-        f = open(os.path.join(specDir, flanksFn))
+        f = open(flanksFn)
         for r in SeqIO.parse(f, "fasta"):
             fs[r.id] = r.seq
         f = open(variantsFn)                                                            ################### SP
