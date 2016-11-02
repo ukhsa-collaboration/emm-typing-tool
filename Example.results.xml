@@ -1,0 +1,26 @@
+<ngs_sample id="PHE221509">
+  <script value="emm typing tool" version="1.0"/>
+  <results>
+    <!--(START) EMM Typing Results (START)-->
+    <result type="Final_EMM_type" value="emm75.0.sds"/>
+    <result type="EMM_validated" value="emm75.0.sds">
+      <result_data type="percentage_identity" value="100.0"/>
+      <result_data type="percentage_coverage" value="100.0"/>
+      <result_data type="mean_consensus_depth" value="151.92"/>
+      <result_data type="minimum_consensus_depth" value="11"/>
+      <result_data type="snps" value="0"/>
+      <result_data type="indels" value="0"/>
+      <result_data type="mixed" value="0"/>
+    </result>
+    <result type="EMM_nonValidated" value="emm170.0.sds">
+      <result_data type="percentage_identity" value="100.0"/>
+      <result_data type="percentage_coverage" value="100.0"/>
+      <result_data type="mean_consensus_depth" value="92.93"/>
+      <result_data type="minimum_consensus_depth" value="19"/>
+      <result_data type="snps" value="0"/>
+      <result_data type="indels" value="0"/>
+      <result_data type="mixed" value="0"/>
+    </result>
+  </results>
+</ngs_sample>
+
