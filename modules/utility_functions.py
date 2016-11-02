@@ -1,8 +1,3 @@
-'''
-TODO: Needs module definition, kinds of functions to be found here.
-More description.
-'''
-
 import logging
 import os
 import sys, inspect
