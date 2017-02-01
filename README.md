@@ -154,9 +154,11 @@ An example result.xml file is provided (see Example.result.xml).
 - *“Investigate new type”*: A possible new type is predicted if < 92% identity across region 30-120 of the locus is observed. 
 - *"Not determined"*: No emm type/subtype can be predicted in the following scenarios:
 
-  - two emm validated types with 100% identity are called (contamination). Repeat NGS if this is the case.
-  - two subtypes with 100% identity are called (de novo assembly is required to resolve this)
   - two emm non-validated types with > 100% identity are called (further investigation is required and de novo sssembly might be able to provide a type).
+  - if accompanied by '\*\*' in the 'EMM validated' field then the isolate is tagged for low mapping coverage at 5' end and de novo assemly will be able to provide the correct emm type.
+  
+- *"Mixed sample: emm3.1.sds/emm28.0.sds"*: two emm validated types with 100% identity are called (contamination). Repeat NGS if this is the case.
+- *"emm9: mixed subtypes"*: two subtypes with 100% identity are called (de novo assembly is required to resolve this)
 
 ### Errors while setting up
 
