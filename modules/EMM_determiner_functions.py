@@ -307,17 +307,23 @@ log[str]:  Location to where the EMM_log.txt file will be created
 def write_log(hits,log):
 	# metrics[allele] = [identity, coverage, meanDepth, minDepth, snps, indels, mixed, filteredCoverage]
     if len(hits) > 0:
-		print >> log
-		print >> log, '=' * 70
-		print >> log, "Results Summary"
-		print >> log, '=' * 70
-		print >> log
-		print >> log, "Allele\tidentity\tcoverage\tmeanDepth\tminDepth\tsnps\tindels\tmixed\tfilteredCoverage"
-		sorted_hits = sorted(hits.items(), key=lambda x: x[1][0], reverse=True)
-		i=0
-		while sorted_hits[i][1][1] >= 90:
-			print >> log, sorted_hits[i][0]+'\t'+str(sorted_hits[i][1][0])+'\t'+str(sorted_hits[i][1][1])+'\t'+str(sorted_hits[i][1][2])+'\t'+str(sorted_hits[i][1][3])+'\t'+str(len(sorted_hits[i][1][4]))+'\t'+str(sorted_hits[i][1][5])+'\t'+str(len(sorted_hits[i][1][6]))+'\t'+str(sorted_hits[i][1][7])
-			i+=1
+        print >> log
+        print >> log, '=' * 70
+        print >> log, "Results Summary"
+        print >> log, '=' * 70
+        print >> log
+        print >> log, "Allele\tidentity\tcoverage\tmeanDepth\tminDepth\tsnps\tindels\tmixed\tfilteredCoverage"
+        sorted_hits = sorted(hits.items(), key=lambda x: x[1][0], reverse=True)
+        filtered_hits = [f for f in sorted_hits if f[1][1] >= 90]
+        for hit in filtered_hits:
+            print >> log, hit[0]+'\t'+str(hit[1][0])+'\t'+str(hit[1][1])+'\t'+str(hit[1][2])+'\t'+str(hit[1][3])+'\t'+str(len(hit[1][4]))+'\t'+str(hit[1][5])+'\t'+str(len(hit[1][6]))+'\t'+str(hit[1][7])
+        #try:
+        #    i=0
+        #    while sorted_hits[i][1][1] >= 90:
+        #        print >> log, sorted_hits[i][0]+'\t'+str(sorted_hits[i][1][0])+'\t'+str(sorted_hits[i][1][1])+'\t'+str(sorted_hits[i][1][2])+'\t'+str(sorted_hits[i][1][3])+'\t'+str(len(sorted_hits[i][1][4]))+'\t'+str(sorted_hits[i][1][5])+'\t'+str(len(sorted_hits[i][1][6]))+'\t'+str(sorted_hits[i][1][7])
+        #        i+=1
+        #except IndexError:
+        #    pass
 
 """
 Function
@@ -498,8 +504,6 @@ def read_pileup(pileupFile, refSeq, ranges):
         for allele, lines in groupby(pileup_split, itemgetter(0)):
 
             hash_alignment[allele] = []
-            #if allele == 'emm75.0.sds':
-            #    pass
             for fields in lines:
                 alt_bps = {}
                 locus = fields[0]
@@ -524,12 +528,24 @@ def read_pileup(pileupFile, refSeq, ranges):
                     if nuc_num == ranges[allele][1] and report_insertions != []:
                         report_insertions = total_indels = []
                     elif report_insertions != []:
+                        #i = 0
+                        #while report_insertions:
+                        #    ins = report_insertions[i]
+                        #    ins_length = int(re.search('[0-9]+', ins).group())
+                        #    ins_seq = re.search('[A-Z]+', ins).group()
+                        #    if (ins_seq + str(refSeq[allele][nuc_num:ranges[allele][1]]))[:len(str(refSeq[allele][nuc_num:ranges[allele][1]]))] == str(refSeq[allele][nuc_num:ranges[allele][1]]):
+                        #        report_insertions = report_insertions.remove(ins)
+                        #    else:
+                        #        i += 1
                         for ins in report_insertions:
                             ins_length = int(re.search('[0-9]+', ins).group())
                             ins_seq = re.search('[A-Z]+', ins).group()
                             if (ins_seq + str(refSeq[allele][nuc_num:ranges[allele][1]]))[:len(str(refSeq[allele][nuc_num:ranges[allele][1]]))] == str(refSeq[allele][nuc_num:ranges[allele][1]]):
-                                report_insertions = report_insertions.remove(ins) if len(report_insertions)>1 else []
-                            
+                                try:
+                                    report_insertions = report_insertions.remove(ins) if len(report_insertions)>1 else []
+                                except TypeError:
+                                    pass
+                        if report_insertions == None: report_insertions = []
                     nuc_depth = nuc_match + nuc_mismatch
                     if orig_match+orig_mismatch != orig_depth or nuc_depth > orig_depth:
                         print "Attention required!"
@@ -608,10 +624,10 @@ def pileup_extract_information(ref_bp, align_bps, qualities):
         
     # look for possible mismatches and remove extra symbols
     if set(','.join(align_bps)) != set([",","."]):
-        mm1= re.findall(r'\^[0-9a-zA-Z\!\ "#\$%&\'()\*\+,\.\-\/:;<>\?@\[\]\\\^_`\{\}\|~]{1}[acgtACGT]{1}', align_bps)
+        mm1= re.findall(r'\^[0-9a-zA-Z\!\ "#\$%&\'()\*\+,\.\-\/:;<>\?@\[\]\\\^_`\{\}\|~]{1}[acgtnACGTN]{1}', align_bps)
         for e in list(set(mm1)):
             align_bps = align_bps.replace(e, e[-1:])
-        mm2 = re.findall(r'[acgtACGT]{1}\$', align_bps)
+        mm2 = re.findall(r'[acgtnACGTN]{1}\$', align_bps)
         for e in list(set(mm2)):
             align_bps = align_bps.replace(e, e[:-1])
     
@@ -638,15 +654,22 @@ def pileup_extract_information(ref_bp, align_bps, qualities):
                 mismatch_pos[alt] = [m.start() for m in pt.finditer(align_bps.upper())]
         mismatch_filtered = {}
         for bp in mismatch_pos.keys():
-            mismatch_filtered[bp] = []
-            for m in mismatch_pos[bp]:
-                Q=ord(qualities[m])-33
-                if Q > 20: mismatch_filtered[bp].append(m)
+            if bp != 'N':
+                mismatch_filtered[bp] = []
+                for m in mismatch_pos[bp]:
+                    try:
+                        Q=ord(qualities[m])-33
+                    except IndexError:
+                        pass
+                    if Q > 20: mismatch_filtered[bp].append(m)
                 
     
     match_pos = [m.start() for m in re.finditer(r'[,\.]{1}', align_bps)]
     for m in match_pos:
-        Q= ord(qualities[m])-33
+        try:
+            Q= ord(qualities[m])-33
+        except IndexError:
+            pass
         if Q > 20: match_filtered.append(m)
         
     for bp in ('A', 'C', 'G', 'T', 'N', '*'):
@@ -660,9 +683,10 @@ def pileup_extract_information(ref_bp, align_bps, qualities):
     insertions = [x for x in filter(lambda x:x[0]=="+", indels)]
     report_insertions = []
     for ins in list(set(insertions)):
-        if filtered_match+filtered_mismatch > 4 and insertions.count(ins) > len(qualities)/2: # accepts a read if it occurs in more than half the reads
+        if filtered_match+filtered_mismatch > 4 and insertions.count(ins) >= int(len(qualities)*0.40): # accepts a read if it occurs in more than 40% of the reads
             report_insertions.append(ins)
-    
+    if report_insertions == [] and len(insertions) > len(qualities)*0.80:
+        report_insertions = list(set(insertions))
             
     return match, mismatch, filtered_match, filtered_mismatch, indels_freq, alt_bps, report_insertions
 
@@ -735,7 +759,10 @@ def score(files, workDir, paired, outFile, logFile, nameSep, bowtie, samtools,lo
             identity = 0
         # select snps if mismatches more than 80% of the filtered depth (Q>20)
         snps = [(f[0],f[1], f[7]) for f in hash_alignment[allele] if f[5] > 4 and f[4]/float(f[5]) >= 0.8]
-        indels = [(f[0], [m for m in f[6] if (m[0] in f[8]) or (m[1]/float(f[2]) > 0.5 and f[0]!=ranges[allele][1])]) for f in  unmatched_bps if f[8] != [] or f[6]!= 'None'] # an insertion at the very last bp of the allele would be a result of a mismatch in the flanking region and not a mutation in the allele
+        try:
+            indels = [(f[0], [m for m in f[6] if (m[0] in f[8]) or (m[1]/float(f[2]) > 0.5 and f[0]!=ranges[allele][1])]) for f in  unmatched_bps if f[8] != [] or f[6]!= 'None'] # an insertion at the very last bp of the allele would be a result of a mismatch in the flanking region and not a mutation in the allele
+        except TypeError:
+            pass
         indels = [f for f in indels if f[1] != []]
         mixed = [(f[0],f[1], f[7]) for f in hash_alignment[allele] if f[5] > 4 and f[3]/float(f[5]) < 0.8 and f[4]/float(f[5]) < 0.8]
         posDelEvents = []
@@ -756,8 +783,8 @@ def score(files, workDir, paired, outFile, logFile, nameSep, bowtie, samtools,lo
     write_log(metrics, log)
     filtCovId = filter(lambda x: x[1][0]>=90.0 and x[1][-1]==100.0, metrics.items())
     if verbose:
-		with open(workDir+'/summary.yml', 'w') as out_fp:
-			out_fp.write(yaml.dump(metrics, default_flow_style=True))
+        with open(workDir+'/summary.yml', 'w') as out_fp:
+            out_fp.write(yaml.dump(metrics, default_flow_style=True))
     if filtCovId == []:
         validatedMetrics = [(f, metrics[f]) for f in metrics.keys() if f.split('.')[0] in validatedTypes]
         nonValidatedMetrics = [(f, metrics[f]) for f in metrics.keys() if f.split('.')[0] not in validatedTypes]
@@ -771,7 +798,12 @@ def score(files, workDir, paired, outFile, logFile, nameSep, bowtie, samtools,lo
         sortedValidated = sorted(validated, key=lambda x:x[1][0], reverse=True)
         sortedNonValidated = sorted(nonValidated, key=lambda x:x[1][0], reverse=True)
         if sortedValidated == []:
-            top_hits['validated'] = (None, ['n/a', 'n/a', 'n/a', 'n/a', [], [], [], 'n/a'])
+            validatedMetrics = [(f, metrics[f]) for f in metrics.keys() if f.split('.')[0] in validatedTypes]
+            sortedMetrics = sorted(validatedMetrics, key=lambda x:x[1][-1], reverse=True)
+            if sortedMetrics and sortedMetrics[0][1][0] > 95 and sortedMetrics[0][1][3] < 5:
+                top_hits['validated'] = (sortedMetrics[0][0]+'**',sortedMetrics[0][1]) 
+            else:
+                top_hits['validated'] = (None, ['n/a', 'n/a', 'n/a', 'n/a', [], [], [], 'n/a'])
         elif len(set([f[1][0] for f in sortedValidated[:2]])) == 1:
             hits = [f for f in sortedValidated if f[1][0] == sortedValidated[0][1][0]]
             top_hits['validated'] = sortedValidated[0] if len(hits) == 1 else hits
@@ -844,9 +876,14 @@ def create_xml_file(top_hits,output_directory,ids,version):                     
     else:
         if type(top_hits['validated']) == tuple and top_hits['validated'][1][0] == 100:
             finalMtype = top_hits['validated'][0]
+        elif type(top_hits['validated']) != tuple and top_hits['validated'][0][1][0] == 100:
+            if len(set([f[0].split('.')[0] for f in top_hits['validated']])) == 1:
+                finalMtype = top_hits['validated'][0][0].split('.')[0] + ": mixed subtypes"
+            else:
+                finalMtype = "Mixed sample: " + '/'.join([f[0] for f in top_hits['validated']])
         elif top_hits['validated'][0] == None and ((type(top_hits['nonValidated']) == tuple and top_hits['nonValidated'][1][0] == 100) or (type(top_hits['nonValidated']) != tuple and top_hits['nonValidated'][0][1][0] == 100)):
             finalMtype = top_hits['nonValidated'][0] if type(top_hits['nonValidated']) == tuple else '/'.join([f[0] for f in top_hits['nonValidated']])
-        elif (type(top_hits['validated']) != tuple and top_hits['validated'][0][1][0] < 100) or (type(top_hits['validated']) == tuple and top_hits['validated'][1][0]<100):
+        elif (type(top_hits['validated']) != tuple and top_hits['validated'][0][1][0] < 100) or (type(top_hits['validated']) == tuple and top_hits['validated'][1][0]<100 and top_hits['validated'][1][-1] == 100):
             if (type(top_hits['validated']) != tuple and len(set([f[0].split('.')[0] for f in top_hits['validated']])) == 1) or (type(top_hits['validated']) == tuple):
                 top_hit = top_hits['validated'][0] if type(top_hits['validated']) != tuple else top_hits['validated']
 
@@ -912,6 +949,8 @@ def create_xml_file(top_hits,output_directory,ids,version):                     
                     finalMtype = top_hit[0].split('.')[0]
                 else:
                     finalMtype = 'Investigate new type'
+        elif top_hits["validated"] == tuple and top_hits['validated'][0].find('**') != -1:
+            finalMtype = 'Investigate mapping issues'
         else:
             finalMtype = 'Not determined'
         comment = etree.Comment('(START) EMM Typing Results (START)')
